@@ -15,22 +15,10 @@ void AsmMatrixMutator::executeAndProcedure(Matrix* matrix, int andValue)
 	//int sizeOfElement = sizeof(int);
 	int rawMatrix[columnsCount][stringsCount];
 	for (int i = 0; i < stringsCount; i++)
-	{
 		for (int j = 0; j < columnsCount; j++)
 		{
 			rawMatrix[i][j] = originalMatrix[i][j];
 		}
-	}
-	printf("\n\nbefore:\n");
-	for (int i = 0; i < stringsCount; i++)
-	{
-		printf("|");
-		for (int j = 0; j < columnsCount; j++)
-		{
-			printf("%6d", rawMatrix[i][j]);
-		}
-		printf(" |\n");
-	}
 	_asm finit
 	_asm {
 		mov eax, stringsCount
@@ -45,15 +33,10 @@ void AsmMatrixMutator::executeAndProcedure(Matrix* matrix, int andValue)
 		loop BEGIN
 	}
 	_asm fwait
-	// reading:
-	printf("\n\nResult matrix:\n");
-	for (int i = 0; i < stringsCount; i++)
-	{
-		printf("|");
+	// saving changes to original matrix:
+	for(int i = 0; i < stringsCount; i++)
 		for (int j = 0; j < columnsCount; j++)
 		{
-			printf("%3d", rawMatrix[i][j]);
+			originalMatrix[i][j] = rawMatrix[i][j];
 		}
-		printf(" |\n");
-	}
 }
