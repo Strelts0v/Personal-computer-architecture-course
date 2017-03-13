@@ -33,44 +33,6 @@ Matrix::Matrix(int stringsCount, int columnsCount)
 	}
 }
 
-Matrix::Matrix(Matrix* matrix)
-{
-	this->columnsCount = matrix->columnsCount;
-	this->stringsCount = matrix->stringsCount;
-	this->matrix = new int*[stringsCount];
-	if (this->matrix == NULL)
-	{
-		printf("Error! Not enough memory for matrix...\n");
-		this->matrix = NULL;
-		this->columnsCount = 0;
-		this->stringsCount = 0;
-	}
-	else {
-		for (int i = 0; i < stringsCount; i++)
-		{
-			this->matrix[i] = new int[columnsCount];
-			if (this->matrix[i] == NULL)
-			{
-				printf("Error! Not enough memory for matrix...\n");
-				for (i; i >= 0; i--)
-				{
-					delete this->matrix[i];
-				}
-				delete matrix;
-				this->matrix = NULL;
-				this->columnsCount = 0;
-				this->stringsCount = 0;
-			}
-			else {
-				for (int j = 0; j < columnsCount; j++)
-				{
-					this->matrix[i][j] = matrix->getElement(i, j);
-				}
-			}
-		}
-	}
-}
-
 Matrix::~Matrix()
 {
 	for (int i = stringsCount - 1; i >= 0; i--)
