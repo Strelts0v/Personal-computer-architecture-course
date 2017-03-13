@@ -31,6 +31,7 @@ void MmxMatrixMutator::executeAndProcedure(Matrix* matrix, int andValue)
 		movd rawMatrix[esi * 4], MM2
 		inc esi
 		loop BEGIN
+		emms
 	}
 	// saving changes to original matrix:
 	for (int i = 0; i < stringsCount; i++)
