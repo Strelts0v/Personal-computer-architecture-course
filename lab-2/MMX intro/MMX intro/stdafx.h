@@ -20,4 +20,7 @@
 #include "CMatrixMutator.h"
 #include "MmxMatrixMutator.h"
 
-#define MATRIX_DIMENSION 8
+#define _CRT_SECURE_NO_WARNINGS
+#define MATRIX_DIMENSION 16
+
+double inputNumber();
