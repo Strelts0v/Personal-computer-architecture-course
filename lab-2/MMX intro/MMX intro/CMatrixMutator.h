@@ -10,6 +10,6 @@ public:
 
 	~CMatrixMutator();
 
-	void executeAndProcedure(Matrix* matrix, int andValue);
+	void executeAndProcedure(Matrix* matrix, int begin, int end, int step);
 };
 
