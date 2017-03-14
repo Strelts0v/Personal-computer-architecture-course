@@ -10,6 +10,6 @@ public:
 
 	~MatrixMutator();
 
-	virtual void executeAndProcedure(Matrix* matrix, int andValue) = 0;
+	virtual void executeAndProcedure(Matrix* matrix, int begin, int end, int step) = 0;
 };
 
