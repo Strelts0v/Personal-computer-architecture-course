@@ -16,8 +16,6 @@ public:
 
 	Matrix(int stringsCount, int columnsCount);
 
-	Matrix(Matrix* matrix);
-
 	~Matrix();
 
 	int getColumnsCount();
