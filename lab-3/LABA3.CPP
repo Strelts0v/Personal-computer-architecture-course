@@ -10,6 +10,8 @@ struct VIDEO
 };
 
 #define COLOR_COUNT 7
+#define MASTER_LABEL_SIZE 6
+#define SLAVE_LABEL_SIZE 5
 
 unsigned char colors[7]={0x0B,0x4A,0x6C,0xA4, 0xAA, 0x74, 0xf1}; //array of colors for videobuffer
 char color=0x5E;                                                 //default color;
@@ -17,7 +19,8 @@ char color=0x5E;                                                 //default color
 void print();
 void init();
 
-//IRQ0-7
+//IRQ0-7 
+// declare empty interupption handlers
 void interrupt (*int8) (...);
 void interrupt (*int9) (...);
 void interrupt (*int10) (...);
@@ -36,7 +39,7 @@ void interrupt (*int21) (...);
 void interrupt (*int22) (...);
 void interrupt (*int23) (...);
 
-// new interrupt handlers
+// declare new interrupt handlers
 void interrupt  int60(...) { print(); int8(); }
 void interrupt  int61(...) { 
     color=colors[rand() % COLOR_COUNT]; 
@@ -73,7 +76,8 @@ int main()
 	return 0;
 }
 
-void print()                                                     //Print all 6 registers
+
+void print()
 {
 	char temp;
 	int i,val;
@@ -91,64 +95,77 @@ void print()                                                     //Print all 6 r
 		screenClear++;
     }
     
-    // first vector
-	val = inp(0x21);
+    char master[MASTER_LABEL_SIZE]= {"master"};
+    for(i = 0; i < MASTER_LABEL_SIZE; i++)             // divide on bith (find bits)
+	{                   
+		screen->symb = master[i];     // 1st byte - ascii symbol
+		screen->attr = color;         // 2nd byte - color attribute
+		screen++;
+    }
+    
+    screen+=74;
+	val = inp(0x21);                   // get value of mask register
     for(i = 7;i >= 0; i--)             // divide on bith (find bits)
 	{
         //fill the screen
 		temp = val % 2;
-		val /= 2;                   
+		val >> 1;                     
 		screen->symb = temp + '0';    // 1st byte - ascii symbol
 		screen->attr = color;         // 2nd byte - color attribute
 		screen++;
     }
     
-    // second vector
-	screen += 72;
-	val = inp(0xA1);
-	for (i = 7; i >= 0; i--)
-	{
-		temp = val % 2;
-		val/=2;
-		screen->symb = temp + '0';
-		screen->attr = color;
-		screen++;
-	}
-    
-    // third vector
-	screen += 72;
-	outp (0x20, 0x0A);
+    screen += 72;
+	outp (0x20, 0x0A);                 // choose register of requests of master
 	val=inp(0x20);
 	for (i=7;i>=0;i--)
 	{
 		temp=val%2;
-		val/=2;
+		val >> 2;
 		screen->symb=temp+'0';
 		screen->attr=color;
 		screen++;
 	}
     
-    // fourth vector
-	screen+=152;
-	outp(0xA0,0x0A);
-	val = inp(0xA0);
-	for (i = 7;i >= 0; i--)
-	{
-		temp = val % 2;
-		val /= 2;
-		screen->symb = temp + '0';
-		screen->attr = color;
-		screen++;
-	}
-    
-    // fifth vector
-	screen += 72;
+    screen += 72;
 	outp(0x20, 0x0B);
 	val = inp(0x20);
 	for (i = 7;i >= 0; i--)
 	{
 		temp = val % 2;
-		val /= 2;
+		val >> 2;
+		screen->symb = temp + '0';
+		screen->attr = color;
+		screen++;
+	}
+    
+    screen+=152;
+    char slave[SLAVE_LABEL_SIZE]= {"slave"};
+    for(i = 0; i < SLAVE_LABEL_SIZE; i++)             
+	{                   
+		screen->symb = slave[i];    // 1st byte - ascii symbol
+		screen->attr = color;       // 2nd byte - color attribute
+		screen++;
+    }
+    
+    screen+=75;
+	val = inp(0xA1);
+	for (i = 7; i >= 0; i--)
+	{
+		temp = val % 2;
+		val >> 2;
+		screen->symb = temp + '0';
+		screen->attr = color;
+		screen++;
+	}
+    
+	screen+=72;
+	outp(0xA0,0x0A);
+	val = inp(0xA0);
+	for (i = 7;i >= 0; i--)
+	{
+		temp = val % 2;
+		val >> 2;
 		screen->symb = temp + '0';
 		screen->attr = color;
 		screen++;
@@ -156,12 +173,12 @@ void print()                                                     //Print all 6 r
     
     // sixth vector
 	screen += 72;
-	outp(0xA0,0x0b);
+	outp(0xA0,0x0B);
 	val = inp(0xA0);
 	for (i = 7; i >= 0; i--)
 	{
 		temp = val % 2;
-		val /= 2;
+		val >> 2;
 		screen->symb = temp + '0';
 		screen->attr = color;
 		screen++;
@@ -220,15 +237,15 @@ void init()
     */
     
 	// master 
-	outp(0x20, 0x11);	//ICW1
-	outp(0x21, 0x08);   //ICW2 - base vector for maser
-	outp(0x21, 0x04);	//ICW3
+	outp(0x20, 0x11);	//ICW1 - command for initializing of interruption controller
+	outp(0x21, 0x08);   //ICW2 - master base vector (let set address of interruption vector)
+	outp(0x21, 0x04);	//ICW3   
 	outp(0x21, 0x01);	//ICW4
 
 	// slave
 	outp(0xA0,0x11);    //ICW1
-	outp(0xA1,0x90);	//ICW2 - base vector for slave
-	outp(0xA1,0x04);    //ICW3
+	outp(0xA1,0x90);	//ICW2 - slave base vector (let set address of interruption vector)
+	outp(0xA1,0x02);    //ICW3 (in binary mode)    
 	outp(0xA1,0x01);    //ICW4
 
 	_enable(); // enable interrupt handling (sti)
