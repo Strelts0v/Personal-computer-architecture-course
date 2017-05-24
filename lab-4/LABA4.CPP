@@ -10,73 +10,82 @@ void printConditionWordInBinaryMode();
 void printState(int state);
 void printRandomNumbers(long max, int countOfNumbers);
 void generateSound(int frequency, int delayParam);
-void printDivisionCoefficient();
+int getState(int channel);
+void printDelimiters();
+int getCE(int channel);
 double inputNumber();
 
 int main()
 {
-    int frequences[soundsParamsCount] = {784, 392, 440, 440, 784, 440, 493, 493};
-    int delayParams[soundsParamsCount] = {200, 200, 200, 200, 200, 200, 200, 200};
-	
-    int i;
-    for(i = 0; i < soundsParamsCount; i++)
-    {
-        generateSound(frequences[i], delayParams[i]);
-    }
-    
-    delay(1000);
-
-    printf("\n****Condition words****\n");
-	printConditionWordInBinaryMode();
-	printf("\n");
-
-    printf("****Division coefficients****\n");
-	printDivisionCoefficient();
-
-	long max;
-    int countOfNumbers;
-    printf("\nInput max random value: ");
-	do{
-        max = (long)inputNumber();
-    } while (max <= 0);
-    
-    
-    printf("Input how many you need to generate: ");
+    int end;
     do{
-        countOfNumbers = (int)inputNumber();
-    } while (countOfNumbers <= 0);
+        int frequences[soundsParamsCount] = {784, 392, 440, 440, 784, 440, 493, 493};
+        int delayParams[soundsParamsCount] = {200, 200, 200, 200, 200, 200, 200, 200};
+	
+        for(int i = 0; i < soundsParamsCount; i++)
+        {
+            generateSound(frequences[i], delayParams[i]);
+        }
     
-    printf("Generated numbers:\n");
-	printRandomNumbers(max, countOfNumbers);
+        outp(0x61, inp(0x61) & 0xFC);             // turn OFF dynamic
+    
+        delay(1000);
+
+        printf("\n****Condition words****\n");
+        printConditionWordInBinaryMode();
+        printf("\n");
+
+        printf("****Division coefficients****\n");
+        printDelimiters();
+
+        long max;
+        int countOfNumbers;
+        printf("\nInput max random value: ");
+        do{
+            max = (long)inputNumber();
+        } while (max <= 0);
+    
+    
+        printf("Input how many you need to generate: ");
+        do{
+            countOfNumbers = (int)inputNumber();
+        } while (countOfNumbers <= 0);
+    
+        printf("Generated numbers:\n");
+        printRandomNumbers(max, countOfNumbers);
+        
+        printf("\n\ninput 0 to exit or something else to continue...\n");
+        end = (int)inputNumber();
+    } while (end != 0);
 
 	return 0;
 }
 
 /*
-    Port 43 - control
-    Port 42 - channel 2, connected with dynamic
-    Port 61 - turn ON dynamic
-    B6 - 10 11 011 0 - channel, high & low bytes, mode, format(binary)
+    Port 43 - управляющий
+    Port 42 - канал 2, связан с динамиком
+    Port 61 - включение динамика
+    B6 - 10 11 011 0 - канал, read/write старший + младший байты, режим, формат(двоичный)
 */
 void generateSound(int frequency, int delayParam)
 {
 	int divisionCoefficient;
-	outp(0x43, 0xB6);                         //10 11 011 0
+	outp(0x43, 0xB6);                         
 
 	divisionCoefficient = base / frequency;
-	outp(0x42, divisionCoefficient % 256);    // Low
-	divisionCoefficient /= 256;               // Do smth for pause
-	outp(0x42, divisionCoefficient);          // High
+	outp(0x42, divisionCoefficient % 256);      // low
+	divisionCoefficient /= 256;                 // do smth for pause
+	outp(0x42, divisionCoefficient);            // high
 
-	outp(0x61, inp(0x61) | 3);                // turn ON dymamic
-	delay(delayParam);                        // wait  
-	outp(0x61, inp(0x61) & 0xFC);             // turn OFF dynamic
+	outp(0x61, inp(0x61) | 3);                  // turn ON dymamic
+	delay(delayParam);                          // wait  
+    outp(0x61, inp(0x61) & 0xFC);               // turn OFF
 }
 
 /*
     Condition word:
-    7 - OUT
-    6 - counter readiness for reading
+    7 - OUT (condition of out)
+    6 - флаг перегрузки констант
     4-5 - type of operation
     1-3 - mode
     0 - format
@@ -87,17 +96,11 @@ void printConditionWordInBinaryMode()
     // xxx(channel);   0(format)
 	int state;
 
-	outp(0x43, 0xE2);      // 1110 0010
-	state = inp(0x40);
-	printState(state);
-
-	outp(0x43, 0xE4);      // 1110 0100
-	state = inp(0x41);
-	printState(state);
-
-	outp(0x43, 0xE8);      // 1110 1000
-	state = inp(0x42);
-	printState(state);
+    for(int channel = 0; channel < 3; channel++ )
+    {
+        state = getState(channel);
+        printState(state);
+    }
 }
 
 void printState(int state)
@@ -116,69 +119,62 @@ void printState(int state)
 	printf("\n");
 }
 
-void printRandomNumbers(long max, int countOfNumbers)
-{
-	long divisionCoefficientLow, divisionCoefficientHigh, divisionCoefficientNew;
-    outp(0x43, 0xB6); // 1011 0100
-    // Load conter register of timer
-	outp(0x42, max & 0x00ff);          // at the begining low bytes    
-    outp(0x42, (max & 0xff00) >> 8);   // then high bytes
-	outp(0x61, inp(0x61) | 0x01);      // enable work of channel
-    int i = 0;
-	for(i = 0; i < countOfNumbers; i++)
-    {
-        delay(i);
-		outp(0x43, 0x86); // 1000 0110
-		divisionCoefficientLow = inp(0x42);
-		divisionCoefficientHigh = inp(0x42);
-		divisionCoefficientNew = divisionCoefficientHigh * 256 + divisionCoefficientLow;
-		printf("%ld\n", divisionCoefficientNew);
-	}
-	outp(0x61, inp(0x61) & 0xFC);      // disable work of channel
+//channel - 0, 1 or 2 only
+int getState(int channel)
+{// 1110 0010, 1110 0100, 1110 1000
+	outp(0x43, 0xE0 + (2 << channel));			// 11(RBC mode: read channel mode) 1(not save CE - current state of counter) 0(read value of channel) number of channel 0
+	return inp(0x40 + channel);
 }
 
-/*
-    format for outp : KK 00 0000
-*/
-void printDivisionCoefficient()
+void printRandomNumbers(long max, int countOfNumbers)
 {
-	long divisionCoefficient, divisionCoefficientHigh, divisionCoefficientLow, divisionCoefficientMax = 0;
+	int delimiter;
+    outp(0x43, 0xB4);                           //10 (channel 2) 11(RW lower, that higher) 010(mode 2: with autoloading) 0 (binary)
+    
+    // Load counter register of timer
+	outp(0x42, max % 0x100);                    // at the begining low bytes    
+    outp(0x42, max / 0x100);                    // then high bytes
+    
+    // enable only channel
+	delimiter = inp(0x61);     
+    outp(0x61, delimiter | 0x01);
+    
+	for(int i = 0; i < countOfNumbers; i++)
+    {
+	    delimiter = getCE(2);
+	    printf("%d; ", delimiter);
+	}
+}
 
-    // Channel 0
-    for (long i = 0; i < 65535; i++)
-    {
-        outp(0x43, 0x00);       //00 00 0000
-        divisionCoefficientLow = inp(0x40);
-        divisionCoefficientHigh = inp(0x40);
-        divisionCoefficient = divisionCoefficientHigh * 256 + divisionCoefficientLow;
-        if (divisionCoefficient > divisionCoefficientMax) divisionCoefficientMax = divisionCoefficient;
+void printDelimiters()
+{
+	long kd, kdHigh, kdLow, kdMax = 0;
+    const long CYCLE_COUNT = 47000;             // to find max delimiter
+	for(int k=0; k < 3; k++){
+        for (long i = 0; i<CYCLE_COUNT; i++)
+	    {
+           outp(0x43, 0x00 + (0x40 * k));        
+           kdLow = inp(0x40 + k);               // load low
+           kdHigh = inp(0x40 + k);              // load high
+           kd = kdHigh * 256 + kdLow;
+           if (kd > kdMax) kdMax = kd;
+	    }
+	    printf("%hx\n", kdMax);
+	    kdMax=0;
     }
-    printf("%hx\n", divisionCoefficientMax);
-    
-    // Channel 1
-    divisionCoefficientMax = 0;
-    for (i = 0; i < 65535; i++)
-    {
-        outp(0x43, 0x40);       // 01 00 0000
-        divisionCoefficientLow = inp(0x41);
-        divisionCoefficientHigh = inp(0x41);
-        divisionCoefficient = divisionCoefficientHigh * 256 + divisionCoefficientLow;
-        if (divisionCoefficient > divisionCoefficientMax) divisionCoefficientMax = divisionCoefficient;
-    }
-    printf("%hx\n", divisionCoefficientMax);
-    
-    // Channel 2
-    divisionCoefficientMax = 0;
-    for (i = 0; i < 65535; i++)
-    {
-        outp(0x43, 0x80);       //10 00 0000
-        divisionCoefficientLow = inp(0x42);
-        divisionCoefficientHigh = inp(0x42);
-        divisionCoefficient = divisionCoefficientHigh * 256 + divisionCoefficientLow;
-        if (divisionCoefficient > divisionCoefficientMax) divisionCoefficientMax = divisionCoefficient;
-    }
-    printf("%hx\n", divisionCoefficientMax);
-			
+}
+
+int getCE(int channel)
+{
+	int state, delimiter, port = 0x40;
+	state = getState(channel);
+    // select a channel
+	outp(0x43, (state & 0x0F) | (channel << 6));			// (state & 0x0F) => SC (channel number) = 0, RW = 0 (get CE); than add channel number
+	state = inp(port + channel);                            // take low bytes
+	delimiter = inp(port + channel);                        // take high bytes
+	delimiter <<= 8;                                           
+	delimiter += state;
+	return delimiter;
 }
 
 double inputNumber()
@@ -188,6 +184,6 @@ double inputNumber()
 	do {
 		rewind(stdin);
 		temp = scanf("%lf", &number);
-	} while (temp == 0 && number < 0);
+	} while (temp == 0 || number < 0 || number > 32678);
 	return number;
 }
